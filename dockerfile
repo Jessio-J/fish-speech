@@ -6,15 +6,23 @@ ARG HF_ENDPOINT=https://hf-mirror.com
 FROM python:3.12-slim-bookworm AS model-downloader
 ARG PYPI_MIRROR
 ARG HF_ENDPOINT
+
+# 安装系统级 CA 证书
+RUN apt-get update && apt-get install -y ca-certificates && apt-get clean
+
 WORKDIR /opt/fish-speech
-RUN pip install huggingface_hub \
+
+# 指定兼容的 huggingface_hub 版本
+RUN pip install "huggingface_hub>=0.20.3" \
   -i ${PYPI_MIRROR} \
-  --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}') && \
-  huggingface-cli download --resume-download \
+  --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}')
+
+# 下载模型
+RUN huggingface-cli download --resume-download \
   fishaudio/fish-speech-1.5 \
   --local-dir checkpoints/fish-speech-1.5
 
-# Stage 2: 主镜像
+# Stage 2: 主镜像（保持原样）
 FROM python:3.12-slim-bookworm
 ARG PYPI_MIRROR
 ARG HF_ENDPOINT
