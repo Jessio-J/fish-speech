@@ -1,46 +1,50 @@
-# 全局参数定义
-ARG PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
-ARG HF_ENDPOINT=https://hf-mirror.com
+FROM python:3.12-slim-bookworm AS stage-1
+ARG TARGETARCH
 
-# Stage 1: 模型下载
-FROM python:3.12-slim-bookworm AS model-downloader
-ARG PYPI_MIRROR
-ARG HF_ENDPOINT
-
-# 安装系统级 CA 证书
-RUN apt-get update && apt-get install -y ca-certificates && apt-get clean
+ARG HUGGINGFACE_MODEL=fish-speech-1.5
+ARG HF_ENDPOINT=https://huggingface.co
 
 WORKDIR /opt/fish-speech
 
-# 指定兼容的 huggingface_hub 版本
-RUN pip install "huggingface_hub>=0.20.3" \
-  -i ${PYPI_MIRROR} \
-  --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}')
+RUN set -ex \
+    && pip install huggingface_hub \
+    && HF_ENDPOINT=${HF_ENDPOINT} huggingface-cli download --resume-download fishaudio/${HUGGINGFACE_MODEL} --local-dir checkpoints/${HUGGINGFACE_MODEL}
 
-# 下载模型
-RUN huggingface-cli download --resume-download \
-  fishaudio/fish-speech-1.5 \
-  --local-dir checkpoints/fish-speech-1.5
-
-# Stage 2: 主镜像（保持原样）
 FROM python:3.12-slim-bookworm
-ARG PYPI_MIRROR
-ARG HF_ENDPOINT
-WORKDIR /opt/fish-speech
+ARG TARGETARCH
 
-RUN --mount=type=cache,target=/var/cache/apt \
-    apt-get update && apt-get install -y \
-    libsox-dev ffmpeg && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+ARG DEPENDENCIES="  \
+    ca-certificates \
+    libsox-dev \
+    build-essential \
+    cmake \
+    libasound-dev \
+    portaudio19-dev \
+    libportaudio2 \
+    libportaudiocpp0 \
+    ffmpeg"
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -ex \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
+    && apt-get update \
+    && apt-get -y install --no-install-recommends ${DEPENDENCIES} \
+    && echo "no" | dpkg-reconfigure dash
+
+WORKDIR /opt/fish-speech
 
 COPY . .
 
-RUN --mount=type=cache,target=/root/.cache \
-    pip install -i ${PYPI_MIRROR} \
-    --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}') \
-    -e .[stable]
+RUN --mount=type=cache,target=/root/.cache,sharing=locked \
+    set -ex \
+    && pip install -e .[stable]
 
-COPY --from=model-downloader /opt/fish-speech/checkpoints ./checkpoints
+COPY --from=stage-1 /opt/fish-speech/checkpoints /opt/fish-speech/checkpoints
+
+ENV GRADIO_SERVER_NAME="0.0.0.0"
 
 EXPOSE 7860
+
 CMD ["./entrypoint.sh"]
