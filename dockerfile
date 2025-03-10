@@ -11,7 +11,7 @@ ARG HF_ENDPOINT
 RUN apt-get update && apt-get install -y ca-certificates && apt-get clean
 
 WORKDIR /opt/fish-speech
-RUN pip install huggingface_hub \
+RUN pip install huggingface-hub \
   -i ${PYPI_MIRROR} \
   --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}') && \
   huggingface-cli download --resume-download \
