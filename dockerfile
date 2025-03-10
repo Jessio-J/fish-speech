@@ -1,6 +1,8 @@
 # 全局参数定义
 ARG PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
 ARG HF_ENDPOINT=https://hf-mirror.com
+# 安装系统级 CA 证书
+RUN apt-get update && apt-get install -y ca-certificates && apt-get clean
 
 # Stage 1: 模型下载
 FROM python:3.12-slim-bookworm AS model-downloader
