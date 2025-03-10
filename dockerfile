@@ -7,7 +7,7 @@ FROM python:3.12-slim-bookworm AS model-downloader
 ARG PYPI_MIRROR
 ARG HF_ENDPOINT
 WORKDIR /opt/fish-speech
-RUN pip install huggingface_hub \
+RUN pip install huggingface-hub \
   -i ${PYPI_MIRROR} \
   --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}') && \
   huggingface-cli download --resume-download \
