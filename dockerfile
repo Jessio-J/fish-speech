@@ -10,7 +10,7 @@ ARG HF_ENDPOINT
 WORKDIR /opt/fish-speech
 
 # 修复点1：添加 --trusted-host 并确保变量展开
-RUN pip install huggingface_hub \
+RUN pip install huggingface-hub \
   -i ${PYPI_MIRROR} \
   --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}')
 
