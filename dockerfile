@@ -15,14 +15,12 @@ RUN pip install huggingface_hub \
   -i ${PYPI_MIRROR} \
   --trusted-host $(echo ${PYPI_MIRROR} | awk -F/ '{print $3}') && \
   huggingface-cli download --resume-download \
-  --endpoint ${HF_ENDPOINT} \
   fishaudio/fish-speech-1.5 \
   --local-dir checkpoints/fish-speech-1.5
 
 # Stage 2: 主镜像
 FROM python:3.12-slim-bookworm
 ARG PYPI_MIRROR
-ARG HF_ENDPOINT
 WORKDIR /opt/fish-speech
 
 RUN --mount=type=cache,target=/var/cache/apt \
